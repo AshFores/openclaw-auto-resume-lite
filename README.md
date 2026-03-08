@@ -1,50 +1,50 @@
 # OpenClaw Auto Resume Lite
 
-Lightweight OpenClaw plugin that tries to keep an agent moving when a run stops before the task is done.
+`auto-resume-lite` is a lightweight OpenClaw plugin for one specific job: keep an agent moving when a run stops before the task is actually finished.
 
-It is designed for the common failure modes seen in long-running OpenClaw sessions:
+It targets the failure patterns that show up most often in long-running OpenClaw sessions:
 
-- LLM timeout
+- `LLM` timeout
 - tool-call failure
-- assistant stops after saying it will continue, but does not actually execute the next step
+- assistant says it will continue, but ends the run without taking action
 
-Instead of changing OpenClaw's core loop, this plugin uses OpenClaw's plugin hooks plus `system events` and a `heartbeat wake` to schedule one more recovery run automatically.
+Instead of patching OpenClaw's core agent loop into a large workflow engine, this plugin uses OpenClaw's existing plugin hooks, system events, and heartbeat wake mechanism to schedule a recovery run automatically.
 
-## What It Does
+## Goals
 
-The plugin watches three hook points:
+- Improve practical task completion for long-running agent sessions
+- Add recovery behavior without making OpenClaw itself heavy
+- Stay small, understandable, and easy to remove
+
+## How It Works
+
+The plugin watches these hook points:
 
 - `llm_output`
 - `after_tool_call`
 - `agent_end`
 
-From those, it keeps a minimal per-run state and detects:
+It keeps a small per-run state and classifies interruptions into a few lightweight recovery categories:
 
-1. `timeout`
-2. `tool_error`
-3. `non_action`
+- `timeout`
+- `tool_error`
+- `non_action`
 
-When one of those conditions is detected, it:
+When a recoverable interruption is detected, it:
 
-1. injects a recovery instruction into the current session as a system event
+1. injects a recovery instruction into the current session via a system event
 2. requests a heartbeat wake for that session
 3. lets OpenClaw continue in a fresh follow-up run
 
-## Why "Lite"
-
-This plugin is intentionally small.
-
-It does **not** try to become a full workflow engine with heavy task orchestration, external queues, or deep state machines. It is meant to be a pragmatic stability layer that improves OpenClaw's behavior without making the core runtime bloated.
-
-## Current Recovery Rules
+## Recovery Rules
 
 - If a run ends with an error and the error looks like a timeout, schedule a recovery run.
-- If a run hits tool errors and never gets a successful tool call, schedule a recovery run.
-- If a run ends successfully but only outputs intent language like "let me continue" without any tool call, schedule a recovery run.
+- If a run hits tool errors and never reaches a successful tool call, schedule a recovery run.
+- If a run ends after output that clearly signals intent to continue, but no concrete action was executed, schedule a recovery run.
 
 ## Safety Limits
 
-The plugin includes two built-in brakes:
+This plugin includes two built-in brakes to reduce retry loops:
 
 - `maxAutoResumes`
 - `cooldownMs`
@@ -54,23 +54,23 @@ Default values:
 - `maxAutoResumes = 3`
 - `cooldownMs = 15000`
 
-That prevents easy infinite loops or extremely noisy retries.
+## Installation
 
-## Install
-
-### Local path
+### CLI install
 
 ```bash
-openclaw plugins install --link /path/to/openclaw-auto-resume-lite
+git clone https://github.com/AshFores/openclaw-auto-resume-lite.git
+openclaw plugins install --link ./openclaw-auto-resume-lite
 openclaw plugins enable auto-resume-lite
 openclaw daemon restart
+openclaw plugins list
 ```
 
-### From GitHub
+### Copy-paste prompt for OpenClaw
 
-After publishing this repo, OpenClaw users can install it from the repo path supported by `openclaw plugins install`.
+If you want OpenClaw to install it for you, copy the prompt from [INSTALL_PROMPT.md](./INSTALL_PROMPT.md).
 
-## Config
+## Configuration
 
 Example:
 
@@ -94,26 +94,38 @@ Available options:
 - `maxAutoResumes`: integer, default `3`
 - `cooldownMs`: integer, default `15000`
 
+## Design Scope
+
+This plugin is intentionally limited.
+
+It does not try to become a full durable workflow runtime with:
+
+- external job queues
+- deep task graphs
+- heavyweight checkpoint orchestration
+- broad automatic success evaluation
+
+The point is to improve failure recovery while staying easy to reason about.
+
 ## Limitations
 
-This plugin improves recovery, but it is not magic.
-
 - It does not guarantee eventual success for every task.
-- It does not replace durable checkpoints or structured task state.
-- It works best when the agent can verify state from files and logs, instead of relying only on chat context.
+- It does not replace proper checkpoints or durable task state.
+- It works best when the agent can verify truth from files, logs, and runtime state instead of relying only on chat context.
 
 ## Recommended Pairing
 
-For better real-world results, pair this plugin with:
+For better real-world stability, use it together with:
 
 - shorter session context windows
 - periodic checkpoints written to disk
 - stable model selection instead of highly variable `auto` routing
 
-## Files
+## Repository Layout
 
 - `index.js`: plugin implementation
 - `openclaw.plugin.json`: OpenClaw plugin manifest
+- `INSTALL_PROMPT.md`: copy-paste prompt for automatic installation
 - `package.json`: package metadata
 
 ## License
