@@ -2,7 +2,7 @@
 
 `auto-resume-lite` is a lightweight OpenClaw plugin for one specific job: keep an agent moving when a run stops before the task is actually finished.
 
-## 中文快速安装
+## 快速安装
 
 适合遇到这几类问题的 OpenClaw 用户：
 
