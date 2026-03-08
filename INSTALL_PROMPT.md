@@ -14,7 +14,7 @@ Requirements:
 - Verify the plugin is loaded with `openclaw plugins list` or `openclaw plugins doctor`.
 
 Implementation constraints:
-- Prefer installing it into a stable path under `~/.openclaw/plugins/auto-resume-lite` instead of a temporary project directory.
+- Prefer installing it into a stable path under `~/.openclaw/plugins/auto-resume-lite` on macOS/Linux, or `%USERPROFILE%\\.openclaw\\plugins\\auto-resume-lite` on Windows, instead of a temporary project directory.
 - If the plugin already exists, update it in place instead of creating duplicates.
 - Do not stop after describing the plan. Execute the installation steps and report the final status.
 ```

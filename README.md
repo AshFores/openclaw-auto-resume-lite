@@ -89,6 +89,33 @@ openclaw plugins list
 
 If you want OpenClaw to install it for you, copy the prompt from [INSTALL_PROMPT.md](./INSTALL_PROMPT.md).
 
+## Platform Notes
+
+Tested on:
+
+- macOS
+
+Expected to work on:
+
+- Linux
+- Windows
+
+Why:
+
+- the plugin only uses Node.js standard libraries
+- it relies on OpenClaw's plugin hooks, system events, and heartbeat wake APIs
+- it does not depend on macOS-specific shell commands or platform-only tooling
+
+Recommended stable install path:
+
+- macOS / Linux: `~/.openclaw/plugins/auto-resume-lite`
+- Windows: `%USERPROFILE%\\.openclaw\\plugins\\auto-resume-lite`
+
+Caveat:
+
+- Linux and Windows support is expected, but not yet fully validated in real user environments
+- issues and PRs for platform-specific fixes are welcome
+
 ## Configuration
 
 Example:
