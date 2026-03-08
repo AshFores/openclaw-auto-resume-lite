@@ -2,6 +2,25 @@
 
 `auto-resume-lite` is a lightweight OpenClaw plugin for one specific job: keep an agent moving when a run stops before the task is actually finished.
 
+## 中文快速安装
+
+适合遇到这几类问题的 OpenClaw 用户：
+
+- 任务做到一半因为超时中断
+- 工具调用失败后直接停住
+- 模型说“我继续处理”，但没有真正执行下一步
+
+最快安装方式：
+
+```bash
+git clone https://github.com/AshFores/openclaw-auto-resume-lite.git
+openclaw plugins install --link ./openclaw-auto-resume-lite
+openclaw plugins enable auto-resume-lite
+openclaw daemon restart
+```
+
+如果你想直接让 OpenClaw 自动安装，复制 [INSTALL_PROMPT.md](./INSTALL_PROMPT.md) 里的 prompt 给它即可。
+
 It targets the failure patterns that show up most often in long-running OpenClaw sessions:
 
 - `LLM` timeout
