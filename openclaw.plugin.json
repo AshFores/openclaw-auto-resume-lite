@@ -1,0 +1,23 @@
+{
+  "id": "auto-resume-lite",
+  "name": "Auto Resume Lite",
+  "description": "Lightweight auto-resume for interrupted agent runs.",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "type": "boolean"
+      },
+      "maxAutoResumes": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 10
+      },
+      "cooldownMs": {
+        "type": "integer",
+        "minimum": 0
+      }
+    }
+  }
+}

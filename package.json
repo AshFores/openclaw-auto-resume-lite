@@ -1,0 +1,28 @@
+{
+  "name": "auto-resume-lite",
+  "version": "0.1.0",
+  "description": "Lightweight auto-resume plugin for interrupted OpenClaw agent runs",
+  "license": "MIT",
+  "author": "newclaw",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AshFores/openclaw-auto-resume-lite.git"
+  },
+  "homepage": "https://github.com/AshFores/openclaw-auto-resume-lite",
+  "bugs": {
+    "url": "https://github.com/AshFores/openclaw-auto-resume-lite/issues"
+  },
+  "keywords": [
+    "openclaw",
+    "plugin",
+    "agent",
+    "auto-resume",
+    "recovery"
+  ],
+  "type": "module",
+  "openclaw": {
+    "extensions": [
+      "./index.js"
+    ]
+  }
+}
