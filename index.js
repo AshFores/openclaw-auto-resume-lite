@@ -15,6 +15,17 @@ const INTENT_PATTERNS = [
   /\bcontinue\b/i,
   /\bnext step\b/i,
   /\buse\s+(the\s+)?exec\b/i,
+  /让我/i,
+  /我来/i,
+  /我先/i,
+  /继续/i,
+  /接下来/i,
+  /然后我/i,
+  /让我读取/i,
+  /让我检查/i,
+  /让我查看/i,
+  /让我分析/i,
+  /让我继续/i,
 ];
 
 function isObject(value) {
