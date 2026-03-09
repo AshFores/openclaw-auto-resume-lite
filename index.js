@@ -115,6 +115,20 @@ function rememberRunContext(runState, ctx) {
   runState.updatedAt = Date.now();
 }
 
+function touchSessionRun(state, ctx, runId) {
+  if (!ctx?.sessionKey || !runId) {
+    return;
+  }
+  const session = isObject(state.sessions[ctx.sessionKey]) ? state.sessions[ctx.sessionKey] : {};
+  state.sessions[ctx.sessionKey] = {
+    ...session,
+    lastRunId: runId,
+    sessionId: typeof ctx.sessionId === "string" ? ctx.sessionId : session.sessionId || "",
+    agentId: typeof ctx.agentId === "string" ? ctx.agentId : session.agentId || "",
+    updatedAt: Date.now(),
+  };
+}
+
 function detectIntent(texts) {
   return texts.some((text) => INTENT_PATTERNS.some((pattern) => pattern.test(text)));
 }
@@ -254,6 +268,18 @@ function findLatestRun(state, criteria = {}) {
   return { runId: match[0], runState: match[1] };
 }
 
+function resolveRunForAgentEnd(state, ctx) {
+  const session = ctx?.sessionKey && isObject(state.sessions[ctx.sessionKey]) ? state.sessions[ctx.sessionKey] : null;
+  const directRunId = typeof session?.lastRunId === "string" ? session.lastRunId : "";
+  if (directRunId && isObject(state.runs[directRunId])) {
+    return { runId: directRunId, runState: state.runs[directRunId] };
+  }
+  return findLatestRun(state, {
+    sessionId: ctx?.sessionId || "",
+    sessionKey: ctx?.sessionKey || "",
+  });
+}
+
 const plugin = {
   id: "auto-resume-lite",
   name: "Auto Resume Lite",
@@ -266,6 +292,7 @@ const plugin = {
         return;
       }
       rememberRunContext(runState, ctx);
+      touchSessionRun(state, ctx, event.runId);
       runState.assistantTexts = Array.isArray(event.assistantTexts)
         ? event.assistantTexts.filter((text) => typeof text === "string").slice(-8)
         : [];
@@ -281,6 +308,7 @@ const plugin = {
         return;
       }
       rememberRunContext(runState, ctx);
+      touchSessionRun(state, ctx, event.runId);
       runState.toolCalls += 1;
       if (event.error) {
         runState.toolErrors += 1;
@@ -294,10 +322,7 @@ const plugin = {
 
     api.on("agent_end", async (event, ctx) => {
       const state = await loadState(api);
-      const { runId, runState } = findLatestRun(state, {
-        sessionId: ctx.sessionId,
-        sessionKey: ctx.sessionKey,
-      });
+      const { runId, runState } = resolveRunForAgentEnd(state, ctx);
       const effectiveRunState = runState;
 
       const sessionKey = ctx.sessionKey || effectiveRunState?.sessionKey || "";
@@ -355,6 +380,9 @@ const plugin = {
 
       if (runId) {
         delete state.runs[runId];
+      }
+      if (sessionKey && isObject(state.sessions[sessionKey]) && state.sessions[sessionKey].lastRunId === runId) {
+        delete state.sessions[sessionKey].lastRunId;
       }
 
       pruneRuns(state);
