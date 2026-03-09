@@ -14,10 +14,6 @@ const INTENT_PATTERNS = [
   /\bi'll\b/i,
   /\bcontinue\b/i,
   /\bnext step\b/i,
-  /\binspect\b/i,
-  /\bcheck\b/i,
-  /\bverify\b/i,
-  /\bfix\b/i,
   /\buse\s+(the\s+)?exec\b/i,
 ];
 
@@ -219,11 +215,27 @@ function pruneRuns(state) {
 }
 
 function findLatestRunForSession(state, sessionId) {
-  if (!sessionId) {
+  return findLatestRun(state, { sessionId });
+}
+
+function findLatestRun(state, criteria = {}) {
+  const { sessionId = "", sessionKey = "" } = criteria;
+  if (!sessionId && !sessionKey) {
     return { runId: "", runState: null };
   }
   const match = Object.entries(state.runs)
-    .filter(([, entry]) => entry?.sessionId === sessionId)
+    .filter(([, entry]) => {
+      if (!entry) {
+        return false;
+      }
+      if (sessionId && entry.sessionId === sessionId) {
+        return true;
+      }
+      if (sessionKey && entry.sessionKey === sessionKey) {
+        return true;
+      }
+      return false;
+    })
     .sort((a, b) => (b[1]?.updatedAt || 0) - (a[1]?.updatedAt || 0))[0];
   if (!match) {
     return { runId: "", runState: null };
@@ -271,7 +283,10 @@ const plugin = {
 
     api.on("agent_end", async (event, ctx) => {
       const state = await loadState(api);
-      const { runId, runState } = findLatestRunForSession(state, ctx.sessionId);
+      const { runId, runState } = findLatestRun(state, {
+        sessionId: ctx.sessionId,
+        sessionKey: ctx.sessionKey,
+      });
       const effectiveRunState = runState;
 
       const sessionKey = ctx.sessionKey || effectiveRunState?.sessionKey || "";
@@ -283,30 +298,40 @@ const plugin = {
       }
 
       const errorText = summarizeError(event.error || "");
-      const toolErrorOnly =
+      const sawAnyToolError =
         effectiveRunState &&
-        effectiveRunState.toolErrors > 0 &&
-        effectiveRunState.successfulToolCalls === 0;
+        effectiveRunState.toolErrors > 0;
       const nonActionStop =
         event.success &&
         effectiveRunState &&
-        effectiveRunState.toolCalls === 0 &&
         effectiveRunState.detectedIntent;
+
+      api.logger.info(`auto-resume-lite agent_end observed`, {
+        success: event.success,
+        sessionKey,
+        sessionId,
+        runId,
+        toolCalls: effectiveRunState?.toolCalls || 0,
+        toolErrors: effectiveRunState?.toolErrors || 0,
+        successfulToolCalls: effectiveRunState?.successfulToolCalls || 0,
+        detectedIntent: effectiveRunState?.detectedIntent || false,
+        errorText,
+      });
 
       let scheduled = false;
       if (!event.success) {
-        const reason = /timed out|timeout/i.test(errorText) ? "timeout" : toolErrorOnly ? "tool_error" : "agent_error";
+        const reason = /timed out|timeout/i.test(errorText) ? "timeout" : sawAnyToolError ? "tool_error" : "agent_error";
         scheduled = await maybeScheduleResume(api, state, {
           reason,
-          details: toolErrorOnly ? effectiveRunState.lastToolError || errorText : errorText,
+          details: sawAnyToolError ? effectiveRunState.lastToolError || errorText : errorText,
           sessionKey,
           agentId,
           sessionId,
           runId,
         });
-      } else if (toolErrorOnly || nonActionStop) {
+      } else if (sawAnyToolError || nonActionStop) {
         scheduled = await maybeScheduleResume(api, state, {
-          reason: toolErrorOnly ? "tool_error" : "non_action",
+          reason: sawAnyToolError ? "tool_error" : "non_action",
           details: effectiveRunState?.lastToolError || "",
           sessionKey,
           agentId,
