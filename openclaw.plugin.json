@@ -17,6 +17,12 @@
       "cooldownMs": {
         "type": "integer",
         "minimum": 0
+      },
+      "denySessionKeyPrefixes": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
       }
     }
   }

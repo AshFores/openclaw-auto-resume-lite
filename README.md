@@ -139,6 +139,10 @@ Available options:
 - `enabled`: `true | false`
 - `maxAutoResumes`: integer, default `3`
 - `cooldownMs`: integer, default `15000`
+- `denySessionKeyPrefixes`: array of session-key prefixes to never auto-resume, for example `[
+  "agent:main:feishu:",
+  "agent:main:discord:"
+]`
 
 ## Design Scope
 
