@@ -8,8 +8,10 @@ Install the OpenClaw plugin from https://github.com/AshFores/openclaw-auto-resum
 Requirements:
 - Clone the repo locally if needed.
 - Install it with `openclaw plugins install --link`.
-- Enable the plugin `auto-resume-lite`.
 - Ensure `plugins.allow` includes `auto-resume-lite`.
+- Before enabling it broadly, decide whether this deployment includes human-facing direct chat channels such as Telegram, Feishu, Discord, Signal, or similar.
+- If the deployment uses human-facing direct chat, ask the user/operator to confirm the intended scope before broadening auto-resume behavior.
+- If no broader confirmation is given, enable the plugin only with a conservative default policy that deny-lists direct-chat session families where appropriate (for example `agent:main:telegram:` and `agent:main:feishu:`).
 - Restart the OpenClaw gateway.
 - Verify the plugin is loaded with `openclaw plugins list` or `openclaw plugins doctor`.
 

@@ -73,6 +73,46 @@ Default values:
 - `maxAutoResumes = 3`
 - `cooldownMs = 15000`
 
+## Recommended Scope
+
+This plugin works best for **execution-oriented / task-like sessions** where an interrupted run really should continue.
+
+Examples:
+
+- long-running tool workflows
+- background task sessions
+- task/worker-like runs where timeout or unrecovered tool failure is genuinely resumable
+
+Use extra caution for **human-facing direct chat** sessions.
+
+Because the plugin injects an internal recovery instruction and wakes the session for another run, it can be socially noisy if enabled too broadly on normal conversations.
+
+### Recommended default policy
+
+- do **not** enable it broadly on direct human chat channels by default
+- prefer channel/session-family deny guards for chat surfaces
+- if you plan to broaden it to direct chat, ask the user/operator to confirm first
+
+Example deny prefixes for common chat-facing sessions:
+
+```json
+{
+  "plugins": {
+    "entries": {
+      "auto-resume-lite": {
+        "enabled": true,
+        "config": {
+          "denySessionKeyPrefixes": [
+            "agent:main:telegram:",
+            "agent:main:feishu:"
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
 ## Installation
 
 ### CLI install
@@ -126,8 +166,14 @@ Example:
     "entries": {
       "auto-resume-lite": {
         "enabled": true,
-        "maxAutoResumes": 3,
-        "cooldownMs": 15000
+        "config": {
+          "maxAutoResumes": 3,
+          "cooldownMs": 15000,
+          "denySessionKeyPrefixes": [
+            "agent:main:telegram:",
+            "agent:main:feishu:"
+          ]
+        }
       }
     }
   }
