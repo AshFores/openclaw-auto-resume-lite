@@ -6,6 +6,7 @@ const DEFAULTS = {
   enabled: true,
   maxAutoResumes: 3,
   cooldownMs: 15000,
+  denySessionKeyPrefixes: [],
 };
 
 const INTENT_PATTERNS = [
@@ -44,7 +45,17 @@ function getPluginConfig(api) {
       Number.isInteger(raw.cooldownMs) && raw.cooldownMs >= 0
         ? raw.cooldownMs
         : DEFAULTS.cooldownMs,
+    denySessionKeyPrefixes: Array.isArray(raw.denySessionKeyPrefixes)
+      ? raw.denySessionKeyPrefixes.filter((v) => typeof v === "string" && v.trim()).map((v) => v.trim())
+      : DEFAULTS.denySessionKeyPrefixes,
   };
+}
+
+function isSessionKeyDenied(sessionKey, cfg) {
+  if (!sessionKey || !Array.isArray(cfg?.denySessionKeyPrefixes)) {
+    return false;
+  }
+  return cfg.denySessionKeyPrefixes.some((prefix) => sessionKey.startsWith(prefix));
 }
 
 function getStateFile(api) {
@@ -161,6 +172,13 @@ function buildResumeInstruction(reason, details) {
 async function maybeScheduleResume(api, state, params) {
   const cfg = getPluginConfig(api);
   if (!cfg.enabled || !params.sessionKey) {
+    return false;
+  }
+  if (isSessionKeyDenied(params.sessionKey, cfg)) {
+    api.logger.info(`auto-resume skipped by denySessionKeyPrefixes for ${params.sessionKey}`, {
+      reason: params.reason,
+      runId: params.runId,
+    });
     return false;
   }
 
@@ -337,10 +355,15 @@ const plugin = {
       const sawAnyToolError =
         effectiveRunState &&
         effectiveRunState.toolErrors > 0;
+      const unrecoveredToolError =
+        effectiveRunState &&
+        effectiveRunState.toolErrors > 0 &&
+        (effectiveRunState.successfulToolCalls || 0) === 0;
       const nonActionStop =
         event.success &&
         effectiveRunState &&
-        effectiveRunState.detectedIntent;
+        effectiveRunState.detectedIntent &&
+        (effectiveRunState.toolCalls || 0) === 0;
 
       api.logger.info(`auto-resume-lite agent_end observed`, {
         success: event.success,
@@ -356,18 +379,18 @@ const plugin = {
 
       let scheduled = false;
       if (!event.success) {
-        const reason = /timed out|timeout/i.test(errorText) ? "timeout" : sawAnyToolError ? "tool_error" : "agent_error";
+        const reason = /timed out|timeout/i.test(errorText) ? "timeout" : unrecoveredToolError ? "tool_error" : "agent_error";
         scheduled = await maybeScheduleResume(api, state, {
           reason,
-          details: sawAnyToolError ? effectiveRunState.lastToolError || errorText : errorText,
+          details: unrecoveredToolError ? effectiveRunState.lastToolError || errorText : errorText,
           sessionKey,
           agentId,
           sessionId,
           runId,
         });
-      } else if (sawAnyToolError || nonActionStop) {
+      } else if (unrecoveredToolError || nonActionStop) {
         scheduled = await maybeScheduleResume(api, state, {
-          reason: sawAnyToolError ? "tool_error" : "non_action",
+          reason: unrecoveredToolError ? "tool_error" : "non_action",
           details: effectiveRunState?.lastToolError || "",
           sessionKey,
           agentId,
